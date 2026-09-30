@@ -3,47 +3,55 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>Особиста Kanban-дошка справ</title>
+
     <link rel="stylesheet" href="css/style.css" />
   </head>
+
   <body>
-    <header>
+    <header class="site-header">
       <h1>Kanban board</h1>
     </header>
 
-    <main>
-      <section>
+    <main class="kanban-board">
+      <section class="kanban-column">
         <h2>To Do</h2>
+
         <div class="horizontal_border"></div>
 
-        <article class="card">
-          <h3>Заголовок завдання (тест)</h3>
-          <p>Опис завдання (тест)</p>
-        </article>
+        <div class="cards-list">
+          <article class="card">
+            <h3>Заголовок завдання (тест)</h3>
+            <p>Опис завдання (тест)</p>
+          </article>
+        </div>
       </section>
 
-      <div class="vertical_border"></div>
-
-      <section>
+      <section class="kanban-column">
         <h2>In Progress</h2>
+
         <div class="horizontal_border"></div>
 
-        <article class="card">
-          <h3>Заголовок завдання (тест)</h3>
-          <p>Опис завдання (тест)</p>
-        </article>
+        <div class="cards-list">
+          <article class="card">
+            <h3>Заголовок завдання (тест)</h3>
+            <p>Опис завдання (тест)</p>
+          </article>
+        </div>
       </section>
 
-      <div class="vertical_border"></div>
-
-      <section>
+      <section class="kanban-column">
         <h2>Done</h2>
+
         <div class="horizontal_border"></div>
 
-        <article class="card">
-          <h3>Заголовок завдання (тест)</h3>
-          <p>Опис завдання (тест)</p>
-        </article>
+        <div class="cards-list">
+          <article class="card">
+            <h3>Заголовок завдання (тест)</h3>
+            <p>Опис завдання (тест)</p>
+          </article>
+        </div>
       </section>
     </main>
 
