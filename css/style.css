@@ -204,6 +204,26 @@ main.kanban-board {
   color: var(--color-text-muted);
 }
 
+/* Виконана задача: клас done додає скрипт (практикум 7) */
+.card.done {
+  background-color: var(--done-tint);
+  border-color: #bfe3cd;
+  border-left-color: var(--done-accent);
+}
+
+.card.done h3 {
+  color: var(--done-ink);
+}
+
+/* Підсумок колонки Done: кількість виконаних задач (практикум 7) */
+.column-summary {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--status-ink);
+}
+
 footer {
   padding: var(--space-5) var(--space-4);
   font-size: var(--text-xs);
