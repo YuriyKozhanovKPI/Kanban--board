@@ -16,6 +16,34 @@
       <h1>Kanban board</h1>
     </header>
 
+    <section class="task-form" aria-labelledby="task-form-title">
+      <h2 id="task-form-title">Нова задача</h2>
+
+      <form class="task-form__form" id="task-form">
+        <div class="form-field">
+          <label for="task-title">Заголовок</label>
+          <input
+            type="text"
+            id="task-title"
+            name="title"
+            required
+            pattern=".{3,}"
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="task-column">Колонка</label>
+          <select id="task-column" name="column">
+            <option value="To Do" selected>To Do</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Done">Done</option>
+          </select>
+        </div>
+
+        <button type="submit" class="task-form__submit">Додати задачу</button>
+      </form>
+    </section>
+
     <main class="kanban-board">
       <section class="kanban-column kanban-column--todo">
         <h2>To Do</h2>

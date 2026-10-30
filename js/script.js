@@ -57,12 +57,17 @@ function markTasks(taskList) {
 
 // Виводить задачі у колонки, що відповідають їхньому статусу
 function renderTasks(taskList) {
-  for (const task of taskList) {
+  // Повторний рендер починається з порожніх списків, щоб не дублювати картки
+  Object.values(columns).forEach((list) => list.replaceChildren());
+
+  taskList.forEach((task, index) => {
     const card = document.createElement("article");
     const title = document.createElement("h3");
 
     card.classList.add("card");
     card.dataset.status = task.status;
+    card.dataset.index = index;
+    card.title = "Натисніть, щоб перемістити до наступної колонки";
     title.textContent = task.title;
     card.append(title);
 
@@ -72,7 +77,7 @@ function renderTasks(taskList) {
     }
 
     columns[task.status].append(card);
-  }
+  });
 
   renderDoneCount(taskList);
 }
@@ -86,3 +91,63 @@ function renderDoneCount(taskList) {
 renderTasks(tasks);
 countByStatus(tasks);
 markTasks(tasks);
+
+// Форма додавання нової задачі
+const form = document.querySelector("#task-form");
+const titleInput = document.querySelector("#task-title");
+const columnSelect = document.querySelector("#task-column");
+
+// Додаткова валідація: заголовок має містити щонайменше 3 символи
+titleInput.addEventListener("input", () => {
+  if (titleInput.value !== "" && titleInput.value.trim().length < 3) {
+    titleInput.setCustomValidity("Заголовок має містити щонайменше 3 символи");
+  } else {
+    titleInput.setCustomValidity("");
+  }
+});
+
+// Повідомлення про помилку валідації в консолі
+titleInput.addEventListener("invalid", () => {
+  console.log(
+    `Помилка валідації: заголовок «${titleInput.value}» має містити щонайменше 3 символи`,
+  );
+});
+
+// Надсилання форми без перезавантаження сторінки
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const title = titleInput.value.trim();
+  const status = columnSelect.value;
+
+  tasks.push({ title, status });
+  renderTasks(tasks);
+  form.reset();
+  titleInput.setCustomValidity("");
+
+  console.log(`Додано задачу: «${title}» → ${status}`);
+});
+
+// Переміщення задачі до наступної колонки кліком по картці
+const statusOrder = ["To Do", "In Progress", "Done"];
+const board = document.querySelector(".kanban-board");
+
+board.addEventListener("click", (event) => {
+  const card = event.target.closest(".card");
+  if (!card) {
+    return;
+  }
+
+  const task = tasks[card.dataset.index];
+  const currentIndex = statusOrder.indexOf(task.status);
+  if (currentIndex === statusOrder.length - 1) {
+    return;
+  }
+
+  const nextStatus = statusOrder[currentIndex + 1];
+  console.log(
+    `Задачу «${task.title}» переміщено: ${task.status} → ${nextStatus}`,
+  );
+  task.status = nextStatus;
+  renderTasks(tasks);
+});
