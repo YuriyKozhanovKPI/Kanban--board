@@ -3,15 +3,11 @@ console.log("js/script.js підключено");
 // Прибирає статичні картки-заглушки, залишені з практикуму 2
 document.querySelectorAll(".card").forEach((card) => card.remove());
 
-// Дані варіанта 11: задачі особистої Kanban-дошки та їхні статуси
-const tasks = [
-  { title: "Розробити семантичну розмітку сторінки", status: "Done" },
-  { title: "Налаштувати адаптивну верстку", status: "Done" },
-  { title: "Перевірити контраст тексту", status: "In Progress" },
-  { title: "Додати картки на дошку", status: "To Do" },
-  { title: "Підключити JavaScript до сторінки", status: "In Progress" },
-  { title: "Підготувати звіт до практикуму", status: "To Do" },
-];
+// JSONPlaceholder API: 20 задач користувача 3 для особистої Kanban-дошки (варіант 11)
+const API_URL = "https://jsonplaceholder.typicode.com/todos?userId=3";
+
+// Дані варіанта 11: задачі з API, доповнені формою та кліком по картці
+const tasks = [];
 
 // Стрілкова функція: перевіряє, чи задача виконана
 const isDone = (task) => task.status === "Done";
@@ -88,10 +84,6 @@ function renderDoneCount(taskList) {
   doneCount.textContent = `Виконано задач: ${doneTasks.length}`;
 }
 
-renderTasks(tasks);
-countByStatus(tasks);
-markTasks(tasks);
-
 // Форма додавання нової задачі
 const form = document.querySelector("#task-form");
 const titleInput = document.querySelector("#task-title");
@@ -151,3 +143,63 @@ board.addEventListener("click", (event) => {
   task.status = nextStatus;
   renderTasks(tasks);
 });
+
+// -------------------------------------------------------------------
+// Клієнт JSONPlaceholder API (практикум 9)
+// GET https://jsonplaceholder.typicode.com/todos?userId=3 повертає
+// 20 задач користувача 3; поле completed визначає колонку To Do / Done.
+// -------------------------------------------------------------------
+const refreshButton = document.querySelector("#refresh-button");
+const loadingStatus = document.querySelector("#loading-status");
+const errorStatus = document.querySelector("#error-status");
+
+// Стан завантаження: видимий текст і заблокована кнопка «Оновити»
+function showLoading(isLoading) {
+  loadingStatus.hidden = !isLoading;
+  refreshButton.disabled = isLoading;
+}
+
+// Повідомлення про помилку; порожній рядок ховає блок
+function showError(message) {
+  errorStatus.textContent = message;
+  errorStatus.hidden = message === "";
+}
+
+// Запитує задачі та виводить їх у колонки через renderTasks (практикум 7)
+async function loadData() {
+  showLoading(true);
+  showError("");
+
+  try {
+    const response = await fetch(API_URL);
+    if (!response.ok) {
+      throw new Error(`Сервер відповів кодом ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Відповідь API:", data);
+
+    tasks.length = 0;
+    data.forEach((item) => {
+      tasks.push({
+        title: item.title,
+        status: item.completed ? "Done" : "To Do",
+      });
+    });
+
+    renderTasks(tasks);
+    countByStatus(tasks);
+    markTasks(tasks);
+  } catch (error) {
+    showError("Дошку тимчасово не вдалося завантажити.");
+    console.error("Помилка завантаження дошки:", error);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// Кнопка «Оновити» повторює запит без перезавантаження сторінки
+refreshButton.addEventListener("click", loadData);
+
+loadData();
+

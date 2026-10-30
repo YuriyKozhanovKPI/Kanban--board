@@ -44,6 +44,20 @@
       </form>
     </section>
 
+    <section class="api-panel" aria-labelledby="api-panel-title">
+      <h2 id="api-panel-title">Задачі з API</h2>
+
+      <button type="button" class="api-panel__button" id="refresh-button">
+        Оновити
+      </button>
+
+      <p class="api-panel__status" id="loading-status" role="status" hidden>
+        Завантаження…
+      </p>
+
+      <p class="api-panel__error" id="error-status" role="alert" hidden></p>
+    </section>
+
     <main class="kanban-board">
       <section class="kanban-column kanban-column--todo">
         <h2>To Do</h2>
