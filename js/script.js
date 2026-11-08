@@ -38,7 +38,8 @@ function markTasks(taskList) {
 }
 
 // Компонент картки (варіант 11): дані отримує лише через props,
-// а клік повідомляє батьківський компонент подією moveNext(id).
+// а клік повідомляє батьківський компонент подією moveNext(id) —
+// у шаблоні Vue її ім'я записано в kebab-case: move-next.
 const TaskCard = {
   name: "TaskCard",
   props: {
@@ -46,14 +47,15 @@ const TaskCard = {
     title: { type: String, required: true },
     column: { type: String, required: true },
   },
-  emits: ["moveNext"],
+  // kebab-case відповідає стилю Vue і коректно розпізнається Vue DevTools
+  emits: ["move-next"],
   template: `
     <article
       class="card"
       :class="{ done: column === 'Done' }"
       :data-status="column"
       title="Натисніть, щоб перемістити до наступної колонки"
-      @click="$emit('moveNext', taskId)"
+      @click="$emit('move-next', taskId)"
     >
       <h3>{{ title }}</h3>
     </article>
