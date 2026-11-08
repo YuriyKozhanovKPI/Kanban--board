@@ -20,6 +20,10 @@
     </header>
 
     <div id="app" v-cloak>
+      <p class="storage-error" v-if="storageError" role="alert">
+        {{ storageError }}
+      </p>
+
       <section class="task-form" aria-labelledby="task-form-title">
         <h2 id="task-form-title">Нова задача</h2>
 

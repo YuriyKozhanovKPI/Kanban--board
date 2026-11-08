@@ -379,6 +379,21 @@ main.kanban-board {
   color: #9b1c1c;
 }
 
+/* Повідомлення про недоступність IndexedDB (практикум 11) */
+.storage-error {
+  width: 100%;
+  max-width: 1160px;
+  margin: var(--space-4) auto 0;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.45;
+  color: #9b1c1c;
+  background-color: #fdecec;
+  border: 1px solid #f5c2c2;
+  border-radius: var(--radius-card);
+}
+
 footer {
   padding: var(--space-5) var(--space-4);
   font-size: var(--text-xs);
