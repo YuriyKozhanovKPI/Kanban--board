@@ -1,29 +1,15 @@
+// Обрано Vue 3: він підключається одним CDN-скриптом і дає реактивний
+// стан без збірки та Node.js, що найпростіше для навчального проєкту.
 console.log("js/script.js підключено");
-
-// Прибирає статичні картки-заглушки, залишені з практикуму 2
-document.querySelectorAll(".card").forEach((card) => card.remove());
 
 // JSONPlaceholder API: 20 задач користувача 3 для особистої Kanban-дошки (варіант 11)
 const API_URL = "https://jsonplaceholder.typicode.com/todos?userId=3";
 
-// Дані варіанта 11: задачі з API, доповнені формою та кліком по картці
-const tasks = [];
+// Порядок колонок для переміщення задачі кліком
+const statusOrder = ["To Do", "In Progress", "Done"];
 
 // Стрілкова функція: перевіряє, чи задача виконана
 const isDone = (task) => task.status === "Done";
-
-// Контейнери колонок дошки та підсумковий лічильник
-const todoList = document.querySelector("#todo-list");
-const inProgressList = document.querySelector("#inprogress-list");
-const doneList = document.querySelector("#done-list");
-const doneCount = document.querySelector("#done-count");
-
-// Відповідність статусу задачі та колонки, у яку її треба додати
-const columns = {
-  "To Do": todoList,
-  "In Progress": inProgressList,
-  Done: doneList,
-};
 
 // Підраховує кількість задач у кожному статусі (цикл for...of + if)
 function countByStatus(taskList) {
@@ -51,155 +37,155 @@ function markTasks(taskList) {
   }
 }
 
-// Виводить задачі у колонки, що відповідають їхньому статусу
-function renderTasks(taskList) {
-  // Повторний рендер починається з порожніх списків, щоб не дублювати картки
-  Object.values(columns).forEach((list) => list.replaceChildren());
+// Компонент картки (варіант 11): дані отримує лише через props,
+// а клік повідомляє батьківський компонент подією moveNext(id).
+const TaskCard = {
+  name: "TaskCard",
+  props: {
+    taskId: { type: [Number, String], required: true },
+    title: { type: String, required: true },
+    column: { type: String, required: true },
+  },
+  emits: ["moveNext"],
+  template: `
+    <article
+      class="card"
+      :class="{ done: column === 'Done' }"
+      :data-status="column"
+      title="Натисніть, щоб перемістити до наступної колонки"
+      @click="$emit('moveNext', taskId)"
+    >
+      <h3>{{ title }}</h3>
+    </article>
+  `,
+};
 
-  taskList.forEach((task, index) => {
-    const card = document.createElement("article");
-    const title = document.createElement("h3");
+const { createApp } = Vue;
 
-    card.classList.add("card");
-    card.dataset.status = task.status;
-    card.dataset.index = index;
-    card.title = "Натисніть, щоб перемістити до наступної колонки";
-    title.textContent = task.title;
-    card.append(title);
+createApp({
+  components: { TaskCard },
 
-    // Виконані задачі додатково позначаються класом done
-    if (isDone(task)) {
-      card.classList.add("done");
-    }
+  data() {
+    return {
+      // Масив задач живе в реактивному стані Vue, а не в зовнішній змінній
+      tasks: [],
+      newTitle: "",
+      newColumn: "To Do",
+      nextId: 1000,
+      isLoading: false,
+      errorMessage: "",
+    };
+  },
 
-    columns[task.status].append(card);
-  });
+  computed: {
+    // Похідне значення: кількість задач у колонці Done
+    doneCount() {
+      return this.tasks.filter(isDone).length;
+    },
+  },
 
-  renderDoneCount(taskList);
-}
+  methods: {
+    // Задачі для конкретної колонки — основа декларативного v-for
+    tasksByStatus(status) {
+      return this.tasks.filter((task) => task.status === status);
+    },
 
-// Оновлює підсумок: кількість задач у колонці Done
-function renderDoneCount(taskList) {
-  const doneTasks = taskList.filter(isDone);
-  doneCount.textContent = `Виконано задач: ${doneTasks.length}`;
-}
+    // Додає задачу з форми у реактивний масив
+    addTask() {
+      const title = this.newTitle.trim();
+      if (title === "") {
+        return;
+      }
 
-// Форма додавання нової задачі
-const form = document.querySelector("#task-form");
-const titleInput = document.querySelector("#task-title");
-const columnSelect = document.querySelector("#task-column");
-
-// Додаткова валідація: заголовок має містити щонайменше 3 символи
-titleInput.addEventListener("input", () => {
-  if (titleInput.value !== "" && titleInput.value.trim().length < 3) {
-    titleInput.setCustomValidity("Заголовок має містити щонайменше 3 символи");
-  } else {
-    titleInput.setCustomValidity("");
-  }
-});
-
-// Повідомлення про помилку валідації в консолі
-titleInput.addEventListener("invalid", () => {
-  console.log(
-    `Помилка валідації: заголовок «${titleInput.value}» має містити щонайменше 3 символи`,
-  );
-});
-
-// Надсилання форми без перезавантаження сторінки
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-
-  const title = titleInput.value.trim();
-  const status = columnSelect.value;
-
-  tasks.push({ title, status });
-  renderTasks(tasks);
-  form.reset();
-  titleInput.setCustomValidity("");
-
-  console.log(`Додано задачу: «${title}» → ${status}`);
-});
-
-// Переміщення задачі до наступної колонки кліком по картці
-const statusOrder = ["To Do", "In Progress", "Done"];
-const board = document.querySelector(".kanban-board");
-
-board.addEventListener("click", (event) => {
-  const card = event.target.closest(".card");
-  if (!card) {
-    return;
-  }
-
-  const task = tasks[card.dataset.index];
-  const currentIndex = statusOrder.indexOf(task.status);
-  if (currentIndex === statusOrder.length - 1) {
-    return;
-  }
-
-  const nextStatus = statusOrder[currentIndex + 1];
-  console.log(
-    `Задачу «${task.title}» переміщено: ${task.status} → ${nextStatus}`,
-  );
-  task.status = nextStatus;
-  renderTasks(tasks);
-});
-
-// -------------------------------------------------------------------
-// Клієнт JSONPlaceholder API (практикум 9)
-// GET https://jsonplaceholder.typicode.com/todos?userId=3 повертає
-// 20 задач користувача 3; поле completed визначає колонку To Do / Done.
-// -------------------------------------------------------------------
-const refreshButton = document.querySelector("#refresh-button");
-const loadingStatus = document.querySelector("#loading-status");
-const errorStatus = document.querySelector("#error-status");
-
-// Стан завантаження: видимий текст і заблокована кнопка «Оновити»
-function showLoading(isLoading) {
-  loadingStatus.hidden = !isLoading;
-  refreshButton.disabled = isLoading;
-}
-
-// Повідомлення про помилку; порожній рядок ховає блок
-function showError(message) {
-  errorStatus.textContent = message;
-  errorStatus.hidden = message === "";
-}
-
-// Запитує задачі та виводить їх у колонки через renderTasks (практикум 7)
-async function loadData() {
-  showLoading(true);
-  showError("");
-
-  try {
-    const response = await fetch(API_URL);
-    if (!response.ok) {
-      throw new Error(`Сервер відповів кодом ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("Відповідь API:", data);
-
-    tasks.length = 0;
-    data.forEach((item) => {
-      tasks.push({
-        title: item.title,
-        status: item.completed ? "Done" : "To Do",
+      this.tasks.push({
+        id: `local-${this.nextId}`,
+        title,
+        status: this.newColumn,
       });
-    });
+      this.nextId += 1;
 
-    renderTasks(tasks);
-    countByStatus(tasks);
-    markTasks(tasks);
-  } catch (error) {
-    showError("Дошку тимчасово не вдалося завантажити.");
-    console.error("Помилка завантаження дошки:", error);
-  } finally {
-    showLoading(false);
-  }
-}
+      console.log(`Додано задачу: «${title}» → ${this.newColumn}`);
 
-// Кнопка «Оновити» повторює запит без перезавантаження сторінки
-refreshButton.addEventListener("click", loadData);
+      this.newTitle = "";
+      this.newColumn = "To Do";
+      this.$refs.titleInput.setCustomValidity("");
+    },
 
-loadData();
+    // Додаткова валідація: заголовок має містити щонайменше 3 символи
+    validateTitle(event) {
+      const input = event.target;
+      if (input.value !== "" && input.value.trim().length < 3) {
+        input.setCustomValidity("Заголовок має містити щонайменше 3 символи");
+      } else {
+        input.setCustomValidity("");
+      }
+    },
 
+    // Повідомлення про помилку валідації в консолі
+    logInvalidTitle() {
+      const input = this.$refs.titleInput;
+      console.log(
+        `Помилка валідації: заголовок «${input.value}» має містити щонайменше 3 символи`,
+      );
+    },
+
+    // Отримує id від TaskCard і змінює реактивний стан.
+    // Vue сам перемальовує список: функцію ручного рендеру renderTasks
+    // з практикуму 7 видалено, querySelector/innerHTML тут не потрібні.
+    moveNext(id) {
+      const task = this.tasks.find((item) => item.id === id);
+      if (!task) {
+        return;
+      }
+
+      const currentIndex = statusOrder.indexOf(task.status);
+      if (currentIndex === -1 || currentIndex === statusOrder.length - 1) {
+        return;
+      }
+
+      const nextStatus = statusOrder[currentIndex + 1];
+      console.log(
+        `Задачу «${task.title}» переміщено: ${task.status} → ${nextStatus}`,
+      );
+      task.status = nextStatus;
+    },
+
+    // -------------------------------------------------------------------
+    // Клієнт JSONPlaceholder API (практикум 9)
+    // GET https://jsonplaceholder.typicode.com/todos?userId=3 повертає
+    // 20 задач користувача 3; поле completed визначає колонку To Do / Done.
+    // -------------------------------------------------------------------
+    async loadData() {
+      this.isLoading = true;
+      this.errorMessage = "";
+
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+          throw new Error(`Сервер відповів кодом ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Відповідь API:", data);
+
+        this.tasks = data.map((item) => ({
+          id: item.id,
+          title: item.title,
+          status: item.completed ? "Done" : "To Do",
+        }));
+
+        countByStatus(this.tasks);
+        markTasks(this.tasks);
+      } catch (error) {
+        this.errorMessage = "Дошку тимчасово не вдалося завантажити.";
+        console.error("Помилка завантаження дошки:", error);
+      } finally {
+        this.isLoading = false;
+      }
+    },
+  },
+
+  mounted() {
+    this.loadData();
+  },
+}).mount("#app");

@@ -56,6 +56,15 @@
   box-sizing: border-box;
 }
 
+/* Vue монтується у #app; display: contents зберігає сітку body */
+#app {
+  display: contents;
+}
+
+#app[v-cloak] {
+  display: none;
+}
+
 body {
   margin: 0;
   min-height: 100vh;

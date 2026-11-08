@@ -6,8 +6,11 @@
 
     <title>Особиста Kanban-дошка справ</title>
 
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="css/style.css" />
 
+    <!-- Vue 3, глобальна CDN-збірка: без Node.js і збірки -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="js/script.js" defer></script>
   </head>
 
@@ -16,90 +19,118 @@
       <h1>Kanban board</h1>
     </header>
 
-    <section class="task-form" aria-labelledby="task-form-title">
-      <h2 id="task-form-title">Нова задача</h2>
+    <div id="app" v-cloak>
+      <section class="task-form" aria-labelledby="task-form-title">
+        <h2 id="task-form-title">Нова задача</h2>
 
-      <form class="task-form__form" id="task-form">
-        <div class="form-field">
-          <label for="task-title">Заголовок</label>
-          <input
-            type="text"
-            id="task-title"
-            name="title"
-            required
-            pattern=".{3,}"
-          />
-        </div>
+        <form class="task-form__form" id="task-form" @submit.prevent="addTask">
+          <div class="form-field">
+            <label for="task-title">Заголовок</label>
+            <input
+              type="text"
+              id="task-title"
+              name="title"
+              ref="titleInput"
+              v-model="newTitle"
+              required
+              pattern=".{3,}"
+              @input="validateTitle"
+              @invalid="logInvalidTitle"
+            />
+          </div>
 
-        <div class="form-field">
-          <label for="task-column">Колонка</label>
-          <select id="task-column" name="column">
-            <option value="To Do" selected>To Do</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Done">Done</option>
-          </select>
-        </div>
+          <div class="form-field">
+            <label for="task-column">Колонка</label>
+            <select id="task-column" name="column" v-model="newColumn">
+              <option value="To Do">To Do</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Done">Done</option>
+            </select>
+          </div>
 
-        <button type="submit" class="task-form__submit">Додати задачу</button>
-      </form>
-    </section>
-
-    <section class="api-panel" aria-labelledby="api-panel-title">
-      <h2 id="api-panel-title">Задачі з API</h2>
-
-      <button type="button" class="api-panel__button" id="refresh-button">
-        Оновити
-      </button>
-
-      <p class="api-panel__status" id="loading-status" role="status" hidden>
-        Завантаження…
-      </p>
-
-      <p class="api-panel__error" id="error-status" role="alert" hidden></p>
-    </section>
-
-    <main class="kanban-board">
-      <section class="kanban-column kanban-column--todo">
-        <h2>To Do</h2>
-
-        <div class="horizontal_border"></div>
-
-        <div class="cards-list" id="todo-list">
-          <article class="card">
-            <h3>Заголовок завдання (тест)</h3>
-            <p>Опис завдання (тест)</p>
-          </article>
-        </div>
+          <button type="submit" class="task-form__submit">Додати задачу</button>
+        </form>
       </section>
 
-      <section class="kanban-column kanban-column--progress">
-        <h2>In Progress</h2>
+      <section class="api-panel" aria-labelledby="api-panel-title">
+        <h2 id="api-panel-title">Задачі з API</h2>
 
-        <div class="horizontal_border"></div>
+        <button
+          type="button"
+          class="api-panel__button"
+          id="refresh-button"
+          :disabled="isLoading"
+          @click="loadData"
+        >
+          Оновити
+        </button>
 
-        <div class="cards-list" id="inprogress-list">
-          <article class="card">
-            <h3>Заголовок завдання (тест)</h3>
-            <p>Опис завдання (тест)</p>
-          </article>
-        </div>
+        <p class="api-panel__status" v-if="isLoading" role="status">
+          Завантаження…
+        </p>
+
+        <p class="api-panel__error" v-if="errorMessage" role="alert">
+          {{ errorMessage }}
+        </p>
       </section>
 
-      <section class="kanban-column kanban-column--done">
-        <h2>Done</h2>
+      <main class="kanban-board">
+        <section class="kanban-column kanban-column--todo">
+          <h2>To Do</h2>
 
-        <div class="horizontal_border"></div>
+          <div class="horizontal_border"></div>
 
-        <div class="cards-list" id="done-list">
-          <article class="card">
-            <h3>Заголовок завдання (тест)</h3>
-            <p>Опис завдання (тест)</p>
-          </article>
-        </div>
+          <div class="cards-list" id="todo-list">
+            <task-card
+              v-for="task in tasksByStatus('To Do')"
+              :key="task.id"
+              :task-id="task.id"
+              :title="task.title"
+              :column="task.status"
+              @move-next="moveNext"
+            ></task-card>
+          </div>
+        </section>
 
-        <p class="column-summary" id="done-count">Виконано задач: 0</p>
-      </section>
-    </main>
+        <section class="kanban-column kanban-column--progress">
+          <h2>In Progress</h2>
+
+          <div class="horizontal_border"></div>
+
+          <div class="cards-list" id="inprogress-list">
+            <task-card
+              v-for="task in tasksByStatus('In Progress')"
+              :key="task.id"
+              :task-id="task.id"
+              :title="task.title"
+              :column="task.status"
+              @move-next="moveNext"
+            ></task-card>
+          </div>
+        </section>
+
+        <section class="kanban-column kanban-column--done">
+          <h2>Done</h2>
+
+          <div class="horizontal_border"></div>
+
+          <div class="cards-list" id="done-list">
+            <task-card
+              v-for="task in tasksByStatus('Done')"
+              :key="task.id"
+              :task-id="task.id"
+              :title="task.title"
+              :column="task.status"
+              @move-next="moveNext"
+            ></task-card>
+          </div>
+
+          <p class="column-summary" id="done-count">
+            Виконано задач: {{ doneCount }}
+          </p>
+        </section>
+      </main>
+    </div>
 
     <footer>
       <p>Виконав студент групи ІП-56 Кожанов Юрій Костянтинович 2026</p>
