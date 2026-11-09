@@ -79,7 +79,7 @@
       </section>
 
       <main class="kanban-board">
-        <section class="kanban-column kanban-column--todo">
+        <section class="kanban-column kanban-column--todo" data-status="To Do">
           <h2>To Do</h2>
 
           <div class="horizontal_border"></div>
@@ -96,7 +96,10 @@
           </div>
         </section>
 
-        <section class="kanban-column kanban-column--progress">
+        <section
+          class="kanban-column kanban-column--progress"
+          data-status="In Progress"
+        >
           <h2>In Progress</h2>
 
           <div class="horizontal_border"></div>
@@ -113,7 +116,7 @@
           </div>
         </section>
 
-        <section class="kanban-column kanban-column--done">
+        <section class="kanban-column kanban-column--done" data-status="Done">
           <h2>Done</h2>
 
           <div class="horizontal_border"></div>

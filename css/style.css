@@ -178,6 +178,23 @@ main.kanban-board {
   background-color: var(--status-accent);
 }
 
+/* Практикум 12: підсвічування зони (колонки), до якої переносять картку */
+.kanban-column--drop-target {
+  animation: drop-zone-pulse 0.9s ease-out;
+}
+
+@keyframes drop-zone-pulse {
+  0% {
+    background-color: var(--status-tint);
+    box-shadow: 0 0 0 4px var(--status-accent);
+  }
+
+  100% {
+    background-color: var(--color-surface);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+}
+
 .cards-list {
   display: flex;
   flex-direction: column;
@@ -195,6 +212,20 @@ main.kanban-board {
     0 1px 2px rgba(15, 23, 42, 0.06),
     0 2px 8px rgba(15, 23, 42, 0.04);
   cursor: pointer;
+  /* Практикум 12: CSS transition анімує transform під час переміщення
+     картки між колонками (FLIP-техніка у script.js) */
+  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Картка, що зараз «летить» у сусідню колонку */
+.card--moving {
+  position: relative;
+  z-index: 2;
+}
+
+/* Під час польоту картка не має обрізатися межами колонки */
+.kanban-column--animating {
+  overflow: visible;
 }
 
 .card:hover {
@@ -461,5 +492,18 @@ footer p {
 
   .horizontal_border {
     margin: 0 calc(-1 * var(--space-4)) var(--space-4);
+  }
+}
+
+/* Повага до системного налаштування зменшення руху */
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+
+  .kanban-column--drop-target {
+    animation: none;
+    background-color: var(--status-tint);
+    box-shadow: 0 0 0 4px var(--status-accent);
   }
 }

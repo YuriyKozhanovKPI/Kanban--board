@@ -197,6 +197,7 @@ const TaskCard = {
       class="card"
       :class="{ done: column === 'Done' }"
       :data-status="column"
+      :data-task-id="taskId"
       title="Натисніть, щоб перемістити до наступної колонки"
       @click="$emit('move-next', taskId)"
     >
@@ -219,6 +220,7 @@ createApp({
       isLoading: false,
       errorMessage: "",
       storageError: "",
+      dropHighlightTimer: null,
     };
   },
 
@@ -317,6 +319,85 @@ createApp({
       );
     },
 
+    // FLIP-анімація (практикум 12): перед зміною стану запам'ятовуємо
+    // екранні позиції всіх карток, щоб після перемальовування показати
+    // переміщення через transform і плавно повернути картку на місце.
+    captureCardPositions() {
+      const positions = new Map();
+      document.querySelectorAll(".card[data-task-id]").forEach((card) => {
+        positions.set(card.dataset.taskId, card.getBoundingClientRect());
+      });
+      return positions;
+    },
+
+    async animateCardMove(positions, movedId) {
+      await this.$nextTick();
+
+      const cards = document.querySelectorAll(".card[data-task-id]");
+      const movedCard = document.querySelector(
+        `.card[data-task-id="${String(movedId)}"]`,
+      );
+      const targetColumn = movedCard?.closest(".kanban-column");
+      targetColumn?.classList.add("kanban-column--animating");
+
+      cards.forEach((card) => {
+        const previous = positions.get(card.dataset.taskId);
+        if (!previous) {
+          return;
+        }
+
+        const current = card.getBoundingClientRect();
+        const dx = previous.left - current.left;
+        const dy = previous.top - current.top;
+        if (dx === 0 && dy === 0) {
+          return;
+        }
+
+        // Ставимо картку в попередню позицію без переходу,
+        // а в наступному кадрі відпускаємо — CSS transition transform
+        // анімує повернення до нової позиції в колонці.
+        card.style.transition = "none";
+        card.style.transform = `translate(${dx}px, ${dy}px)`;
+
+        if (card.dataset.taskId === String(movedId)) {
+          card.classList.add("card--moving");
+        }
+      });
+
+      requestAnimationFrame(() => {
+        cards.forEach((card) => {
+          card.style.transition = "";
+          card.style.transform = "";
+        });
+      });
+
+      setTimeout(() => {
+        cards.forEach((card) => card.classList.remove("card--moving"));
+        targetColumn?.classList.remove("kanban-column--animating");
+      }, 500);
+    },
+
+    // Підсвічування колонки, до якої перенесено картку.
+    // Клас знімається після завершення CSS-анімації, щоб наступний
+    // клік міг запустити її повторно.
+    highlightDropZone(status) {
+      const column = document.querySelector(
+        `.kanban-column[data-status="${status}"]`,
+      );
+      if (!column) {
+        return;
+      }
+
+      column.classList.remove("kanban-column--drop-target");
+      void column.offsetWidth; // перезапуск CSS-анімації
+      column.classList.add("kanban-column--drop-target");
+
+      clearTimeout(this.dropHighlightTimer);
+      this.dropHighlightTimer = setTimeout(() => {
+        column.classList.remove("kanban-column--drop-target");
+      }, 900);
+    },
+
     // Отримує id від TaskCard і змінює реактивний стан.
     // Vue сам перемальовує список: функцію ручного рендеру renderTasks
     // з практикуму 7 видалено, querySelector/innerHTML тут не потрібні.
@@ -333,8 +414,14 @@ createApp({
 
       const nextStatus = statusOrder[currentIndex + 1];
       const previousStatus = task.status;
+
+      // Запам'ятовуємо позиції карток до зміни колонки
+      const positions = this.captureCardPositions();
+
       task.status = nextStatus;
       this.persistToLocalStorage();
+      this.highlightDropZone(nextStatus);
+      this.animateCardMove(positions, id);
 
       try {
         // Сценарій варіанта 11: put з оновленим полем column для того
