@@ -17,6 +17,14 @@
   <body>
     <header class="site-header">
       <h1>Kanban board</h1>
+
+      <!-- Практикум 13: посилання меню ведуть на hash-маршрути -->
+      <nav class="site-nav" aria-label="Навігація застосунку">
+        <a class="site-nav__link" href="#/" data-link>Дошка</a>
+        <a class="site-nav__link" href="#/column/todo" data-link>To Do</a>
+        <a class="site-nav__link" href="#/column/doing" data-link>In Progress</a>
+        <a class="site-nav__link" href="#/column/done" data-link>Done</a>
+      </nav>
     </header>
 
     <div id="app" v-cloak>
@@ -24,117 +32,111 @@
         {{ storageError }}
       </p>
 
-      <section class="task-form" aria-labelledby="task-form-title">
-        <h2 id="task-form-title">Нова задача</h2>
+      <!-- Спільний контейнер: сюди рендериться «сторінка» поточного маршруту -->
+      <main class="view" id="view">
+        <!-- Маршрут "/" — повна дошка з усіма колонками -->
+        <template v-if="currentView === 'board'">
+          <section class="task-form" aria-labelledby="task-form-title">
+            <h2 id="task-form-title">Нова задача</h2>
 
-        <form class="task-form__form" id="task-form" @submit.prevent="addTask">
-          <div class="form-field">
-            <label for="task-title">Заголовок</label>
-            <input
-              type="text"
-              id="task-title"
-              name="title"
-              ref="titleInput"
-              v-model="newTitle"
-              required
-              pattern=".{3,}"
-              @input="validateTitle"
-              @invalid="logInvalidTitle"
-            />
-          </div>
+            <form class="task-form__form" id="task-form" @submit.prevent="addTask">
+              <div class="form-field">
+                <label for="task-title">Заголовок</label>
+                <input
+                  type="text"
+                  id="task-title"
+                  name="title"
+                  ref="titleInput"
+                  v-model="newTitle"
+                  required
+                  pattern=".{3,}"
+                  @input="validateTitle"
+                  @invalid="logInvalidTitle"
+                />
+              </div>
 
-          <div class="form-field">
-            <label for="task-column">Колонка</label>
-            <select id="task-column" name="column" v-model="newColumn">
-              <option value="To Do">To Do</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Done">Done</option>
-            </select>
-          </div>
+              <div class="form-field">
+                <label for="task-column">Колонка</label>
+                <select id="task-column" name="column" v-model="newColumn">
+                  <option value="To Do">To Do</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Done">Done</option>
+                </select>
+              </div>
 
-          <button type="submit" class="task-form__submit">Додати задачу</button>
-        </form>
-      </section>
+              <button type="submit" class="task-form__submit">Додати задачу</button>
+            </form>
+          </section>
 
-      <section class="api-panel" aria-labelledby="api-panel-title">
-        <h2 id="api-panel-title">Задачі з API</h2>
+          <section class="api-panel" aria-labelledby="api-panel-title">
+            <h2 id="api-panel-title">Задачі з API</h2>
 
-        <button
-          type="button"
-          class="api-panel__button"
-          id="refresh-button"
-          :disabled="isLoading"
-          @click="loadData"
-        >
-          Оновити
-        </button>
+            <button
+              type="button"
+              class="api-panel__button"
+              id="refresh-button"
+              :disabled="isLoading"
+              @click="loadData"
+            >
+              Оновити
+            </button>
 
-        <p class="api-panel__status" v-if="isLoading" role="status">
-          Завантаження…
-        </p>
+            <p class="api-panel__status" v-if="isLoading" role="status">
+              Завантаження…
+            </p>
 
-        <p class="api-panel__error" v-if="errorMessage" role="alert">
-          {{ errorMessage }}
-        </p>
-      </section>
+            <p class="api-panel__error" v-if="errorMessage" role="alert">
+              {{ errorMessage }}
+            </p>
+          </section>
 
-      <main class="kanban-board">
-        <section class="kanban-column kanban-column--todo" data-status="To Do">
-          <h2>To Do</h2>
-
-          <div class="horizontal_border"></div>
-
-          <div class="cards-list" id="todo-list">
-            <task-card
-              v-for="task in tasksByStatus('To Do')"
-              :key="task.id"
-              :task-id="task.id"
-              :title="task.title"
-              :column="task.status"
+          <div class="kanban-board">
+            <kanban-column
+              v-for="status in statuses"
+              :key="status"
+              :status="status"
+              :tasks="tasksByStatus(status)"
               @move-next="moveNext"
-            ></task-card>
+            ></kanban-column>
           </div>
-        </section>
+        </template>
 
-        <section
-          class="kanban-column kanban-column--progress"
-          data-status="In Progress"
-        >
-          <h2>In Progress</h2>
+        <!-- Маршрут "/column/:column" — одна колонка на весь екран -->
+        <div class="kanban-board kanban-board--single" v-else-if="currentView === 'column'">
+          <kanban-column
+            :status="columnStatus"
+            :tasks="tasksByStatus(columnStatus)"
+            @move-next="moveNext"
+          ></kanban-column>
+        </div>
 
-          <div class="horizontal_border"></div>
+        <!-- Маршрут "/card/:id" — деталі однієї картки -->
+        <article class="card-detail" v-else-if="currentView === 'card' && activeCard">
+          <h2>Картка задачі</h2>
 
-          <div class="cards-list" id="inprogress-list">
-            <task-card
-              v-for="task in tasksByStatus('In Progress')"
-              :key="task.id"
-              :task-id="task.id"
-              :title="task.title"
-              :column="task.status"
-              @move-next="moveNext"
-            ></task-card>
-          </div>
-        </section>
+          <p class="card-detail__title">{{ activeCard.title }}</p>
 
-        <section class="kanban-column kanban-column--done" data-status="Done">
-          <h2>Done</h2>
+          <dl class="card-detail__meta">
+            <div>
+              <dt>Колонка</dt>
+              <dd>{{ activeCard.status }}</dd>
+            </div>
+            <div>
+              <dt>Ідентифікатор</dt>
+              <dd>{{ activeCard.id }}</dd>
+            </div>
+          </dl>
 
-          <div class="horizontal_border"></div>
+          <a class="card-detail__link" :href="'#/column/' + cardColumn" data-link>
+            Відкрити колонку «{{ activeCard.status }}»
+          </a>
+        </article>
 
-          <div class="cards-list" id="done-list">
-            <task-card
-              v-for="task in tasksByStatus('Done')"
-              :key="task.id"
-              :task-id="task.id"
-              :title="task.title"
-              :column="task.status"
-              @move-next="moveNext"
-            ></task-card>
-          </div>
-
-          <p class="column-summary" id="done-count">
-            Виконано задач: {{ doneCount }}
-          </p>
+        <!-- Жоден маршрут не підійшов — сторінка «Не знайдено» -->
+        <section class="not-found" v-else>
+          <h2>Сторінку не знайдено</h2>
+          <p>Маршрут «{{ currentPath }}» не існує.</p>
+          <a class="not-found__link" href="#/" data-link>Повернутися на дошку</a>
         </section>
       </main>
     </div>

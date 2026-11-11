@@ -106,7 +106,34 @@ body {
   color: var(--color-primary-ink);
 }
 
-main.kanban-board {
+/* Головне меню SPA-навігації (практикум 13) */
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.site-nav__link {
+  padding: 6px 12px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-primary-ink);
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 6px;
+}
+
+.site-nav__link:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.site-nav__link:focus-visible {
+  outline: 3px solid var(--color-primary-ink);
+  outline-offset: 2px;
+}
+
+.kanban-board {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-4);
@@ -244,6 +271,22 @@ main.kanban-board {
   letter-spacing: 0.005em;
 }
 
+/* Назва картки — посилання на маршрут /card/:id (практикум 13) */
+.card__link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.card__link:hover {
+  text-decoration: underline;
+}
+
+.card__link:focus-visible {
+  outline: 3px solid var(--progress-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 .card p {
   margin: 0;
   max-width: 60ch;
@@ -270,6 +313,110 @@ main.kanban-board {
   font-weight: 600;
   line-height: 1.45;
   color: var(--status-ink);
+}
+
+/* Маршрут /column/:column — одна колонка на весь екран (практикум 13) */
+.kanban-board.kanban-board--single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 760px;
+}
+
+.kanban-board--single .kanban-column {
+  min-height: 70vh;
+}
+
+/* Маршрут /card/:id — деталі однієї картки (практикум 13) */
+.card-detail {
+  width: 100%;
+  max-width: 760px;
+  margin: var(--space-4) auto;
+  padding: var(--space-5);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--progress-accent);
+  border-radius: var(--radius-column);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.card-detail h2 {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-primary);
+}
+
+.card-detail__title {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.card-detail__meta {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-5);
+}
+
+.card-detail__meta div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.card-detail__meta dt {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.card-detail__meta dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.card-detail__link,
+.not-found__link {
+  display: inline-block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.card-detail__link:focus-visible,
+.not-found__link:focus-visible {
+  outline: 3px solid var(--progress-accent);
+  outline-offset: 2px;
+}
+
+/* Сторінка 404 для невідомого маршруту (практикум 13) */
+.not-found {
+  max-width: 760px;
+  margin: var(--space-6) auto;
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-column);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.not-found h2 {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-primary);
+}
+
+.not-found p {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
 }
 
 /* ------------------------------------------------------------------
@@ -448,7 +595,7 @@ footer p {
     font-size: 2rem;
   }
 
-  main.kanban-board {
+  .kanban-board {
     grid-template-columns: repeat(3, 1fr);
     gap: var(--space-5);
     margin: var(--space-5) auto;
@@ -471,7 +618,7 @@ footer p {
     font-size: var(--text-2xl);
   }
 
-  main.kanban-board {
+  .kanban-board {
     max-width: 1160px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-6);

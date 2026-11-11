@@ -61,6 +61,13 @@ const STATUS_BY_COLUMN = {
   done: "Done",
 };
 
+// CSS-модифікатор колонки для людської назви статусу
+const COLUMN_CLASS = {
+  "To Do": "todo",
+  "In Progress": "progress",
+  Done: "done",
+};
+
 // Задача для рендеру → запис для сховища
 const toRecord = (task) => ({
   id: task.id,
@@ -199,18 +206,110 @@ const TaskCard = {
       :data-status="column"
       :data-task-id="taskId"
       title="Натисніть, щоб перемістити до наступної колонки"
-      @click="$emit('move-next', taskId)"
+      @click="handleClick"
     >
-      <h3>{{ title }}</h3>
+      <h3>
+        <a class="card__link" :href="'#/card/' + taskId" data-link>{{ title }}</a>
+      </h3>
     </article>
   `,
+  methods: {
+    // Клік по назві — це посилання на маршрут /card/:id, тому картку
+    // не переміщуємо; решта площі картки, як і раніше, рухає її далі.
+    handleClick(event) {
+      if (event.target.closest("a[data-link]")) {
+        return;
+      }
+      this.$emit("move-next", this.taskId);
+    },
+  },
 };
+
+// Колонка дошки як окремий компонент: використовується і на повній
+// дошці (маршрут "/"), і на сторінці однієї колонки ("/column/:column"),
+// тому розмітка й логіка не дублюються.
+const KanbanColumn = {
+  name: "KanbanColumn",
+  props: {
+    status: { type: String, required: true },
+    tasks: { type: Array, required: true },
+  },
+  emits: ["move-next"],
+  template: `
+    <section
+      class="kanban-column"
+      :class="'kanban-column--' + columnClass"
+      :data-status="status"
+    >
+      <h2>{{ status }}</h2>
+
+      <div class="horizontal_border"></div>
+
+      <div class="cards-list">
+        <task-card
+          v-for="task in tasks"
+          :key="task.id"
+          :task-id="task.id"
+          :title="task.title"
+          :column="task.status"
+          @move-next="$emit('move-next', $event)"
+        ></task-card>
+      </div>
+
+      <p class="column-summary" v-if="status === 'Done'">
+        Виконано задач: {{ tasks.length }}
+      </p>
+    </section>
+  `,
+  computed: {
+    columnClass() {
+      return COLUMN_CLASS[this.status];
+    },
+  },
+};
+
+// -------------------------------------------------------------------
+// Клієнтська маршрутизація (практикум 13): hash-based, без бібліотек
+// і без перезавантаження документа. Таблиця маршрутів зіставляє
+// патерн із view-функцією; патерн може містити параметр (:column, :id).
+// -------------------------------------------------------------------
+const routes = [
+  { path: "/", view: "showBoard" },
+  { path: "/column/:column", view: "showColumn" },
+  { path: "/card/:id", view: "showCard" },
+];
+
+// Порівнює поточний шлях із патернами й повертає
+// { view, params } або null, якщо маршрут не знайдено
+function matchRoute(path) {
+  const pathParts = path.split("/").filter(Boolean);
+
+  for (const route of routes) {
+    const routeParts = route.path.split("/").filter(Boolean);
+    if (routeParts.length !== pathParts.length) {
+      continue;
+    }
+
+    const params = {};
+    const isMatch = routeParts.every((part, index) => {
+      if (part.startsWith(":")) {
+        params[part.slice(1)] = decodeURIComponent(pathParts[index]);
+        return true;
+      }
+      return part === pathParts[index];
+    });
+
+    if (isMatch) {
+      return { view: route.view, params };
+    }
+  }
+
+  return null;
+}
 
 const { createApp } = Vue;
 
-createApp({
-  components: { TaskCard },
-
+const app = createApp({
   data() {
     return {
       // Масив задач живе в реактивному стані Vue, а не в зовнішній змінній
@@ -221,17 +320,98 @@ createApp({
       errorMessage: "",
       storageError: "",
       dropHighlightTimer: null,
+
+      // Стан клієнтського роутера
+      statuses: statusOrder,
+      currentView: "board",
+      currentPath: "/",
+      columnStatus: "",
+      activeCardId: null,
     };
   },
 
   computed: {
-    // Похідне значення: кількість задач у колонці Done
-    doneCount() {
-      return this.tasks.filter(isDone).length;
+    // Картка, яку показує маршрут /card/:id (id може бути числом або рядком)
+    activeCard() {
+      return this.tasks.find(
+        (task) => String(task.id) === String(this.activeCardId),
+      );
+    },
+
+    // Колонка для посилання зі сторінки картки
+    cardColumn() {
+      return COLUMN_BY_STATUS[this.activeCard?.status] ?? "todo";
     },
   },
 
   methods: {
+    // -----------------------------------------------------------------
+    // Клієнтська навігація: клік по <a data-link> не перезавантажує
+    // сторінку, а лише змінює hash і викликає рендер.
+    // -----------------------------------------------------------------
+    navigate(path) {
+      if (location.hash === `#${path}`) {
+        this.render();
+        return;
+      }
+      location.hash = path;
+    },
+
+    handleLinkClick(event) {
+      const link = event.target.closest("a[data-link]");
+      if (!link) {
+        return;
+      }
+      event.preventDefault();
+      this.navigate(link.getAttribute("href").replace(/^#/, ""));
+    },
+
+    // Поточний шлях → view-функція; якщо збігу немає — сторінка 404
+    render() {
+      const path = location.hash.slice(1) || "/";
+      this.currentPath = path;
+      console.log(`Маршрут: ${path}`);
+
+      const match = matchRoute(path);
+
+      if (!match) {
+        this.showNotFound();
+        return;
+      }
+
+      this[match.view](match.params);
+    },
+
+    // View-функції: готують дані свого маршруту. Vue очищує контейнер
+    // #view і рендерить у нього потрібний блок, тому innerHTML не потрібен.
+    showBoard() {
+      this.currentView = "board";
+    },
+
+    showColumn({ column }) {
+      const status = STATUS_BY_COLUMN[column];
+      if (!status) {
+        this.showNotFound();
+        return;
+      }
+      this.currentView = "column";
+      this.columnStatus = status;
+    },
+
+    showCard({ id }) {
+      const task = this.tasks.find((item) => String(item.id) === String(id));
+      if (!task) {
+        this.showNotFound();
+        return;
+      }
+      this.currentView = "card";
+      this.activeCardId = task.id;
+    },
+
+    showNotFound() {
+      this.currentView = "notFound";
+    },
+
     // Задачі для конкретної колонки — основа декларативного v-for
     tasksByStatus(status) {
       return this.tasks.filter((task) => task.status === status);
@@ -269,6 +449,10 @@ createApp({
         this.showStorageError(error);
         // Резервний показ даних, якщо IndexedDB не відкривається
         this.tasks = loadFromLocalStorage().map(fromRecord);
+      } finally {
+        // Дані готові — повторно застосовуємо поточний маршрут, щоб
+        // прямий перехід на /card/:id одразу показав картку
+        this.render();
       }
     },
 
@@ -488,5 +672,21 @@ createApp({
 
   mounted() {
     this.initStorage();
+
+    // Кнопки «назад»/«вперед» змінюють hash → hashchange → render
+    window.addEventListener("hashchange", this.render);
+    document.addEventListener("click", this.handleLinkClick);
+    this.render();
   },
-}).mount("#app");
+
+  beforeUnmount() {
+    window.removeEventListener("hashchange", this.render);
+    document.removeEventListener("click", this.handleLinkClick);
+  },
+});
+
+// Компоненти потрібні і всередині інших компонентів, тому реєструємо
+// їх глобально, а не лише в кореневому екземплярі
+app.component("task-card", TaskCard);
+app.component("kanban-column", KanbanColumn);
+app.mount("#app");
